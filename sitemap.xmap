@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map:sitemap xmlns:map="http://apache.org/cocoon/sitemap/1.0">
+  <map:components>
+    <map:generators default="file"/>
+    <map:transformers default="xslt2">
+    </map:transformers>
+    <map:readers default="resource"/>
+    <map:serializers default="xhtml"/>
+    <map:selectors default="browser"/>
+    <map:matchers default="wildcard"/>
+  </map:components>
+  
+  <map:flow language="javascript"/>
+  
+  <!-- Base database resources -->
+  <map:resources>
+    <map:resource name="course_xquery">
+      <map:generate src="http://localhost:8984/rest/courses?run=xq/courses.xquery&amp;{request:queryString}" disable-output-escaping="yes"/>
+    </map:resource>
+    <map:resource name="departments_xquery">
+      <map:generate src="http://localhost:8984/rest/courses?run=xq/departments.xquery" disable-output-escaping="yes"/>
+    </map:resource>
+  </map:resources>
+  
+      <!-- Some views to see intermediate steps -->
+    <map:views>
+        <map:view name="xslfo" from-label="fo">
+            <map:serialize type="xml" />
+        </map:view>
+        <map:view name="paged" from-label="paged">
+            <map:serialize type="xml" />
+        </map:view>
+        <map:view name="end" from-position="last">
+            <map:serialize type="xml" />
+        </map:view>
+        <map:view name="start" from-position="first">
+            <map:serialize type="xml" />
+        </map:view>
+    </map:views>
+
+  <map:pipelines>
+    <map:pipeline>
+	
+ 	  <map:match pattern="">
+         <map:redirect-to uri="index.html"/>
+    </map:match>
+     
+   <map:match pattern="index.html">
+     <map:call resource="course_xquery" />
+     <map:transform src="xsl/landing.xsl" type="xslt2">
+       <map:parameter name="url" value="{0}"/>
+       <map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+     </map:transform>
+     <map:serialize type="xhtml"/>
+   </map:match>
+ 
+   <map:match pattern="browse.html">
+     <map:redirect-to uri="browse.page1.html"/>
+   </map:match>
+      
+    <map:match pattern="browse.page*.html">
+      <map:call resource="departments_xquery" />
+      <map:transform type="filter" label="paged">
+        <map:parameter name="element-name" value="department"/>
+        <map:parameter name="count" value="20"/>
+        <map:parameter name="blocknr" value="{1}"/>
+      </map:transform>  
+      <map:transform src="xsl/department_courses_paged.xsl" type="xslt2">
+        <map:parameter name="url" value="{0}"/>
+        <map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+        <map:parameter name="page_name" value="browse."/>
+        <map:parameter name="qString" value=""/>
+      </map:transform>
+      <map:serialize type="xhtml"/>
+    </map:match>
+   
+   <map:match pattern="search.html">
+     <map:call resource="course_xquery" />
+     <map:transform src="xsl/search.xsl" type="xslt2">
+       <map:parameter name="url" value="{0}"/>
+       <map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+     </map:transform>
+     <map:serialize type="xhtml"/>
+   </map:match>
+   
+   <map:match pattern="departments/*.html">
+     <map:call resource="course_xquery" />
+     <map:transform src="xsl/department_courses_old.xsl" type="xslt2">
+       <map:parameter name="dept_num" value="{1}" />
+       <map:parameter name="url" value="{0}"/>
+       <map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+     </map:transform>
+     <map:serialize type="xhtml" />
+   </map:match>
+ 
+   <map:match pattern="courses/*.html">
+     <map:call resource="course_xquery" />
+     <map:transform src="xsl/course_detail.xsl" type="xslt2">
+       <map:parameter name="cat_num" value="{1}" />
+       <map:parameter name="url" value="{0}"/>
+       <map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+     </map:transform>
+     <map:serialize type="xhtml" />
+   </map:match>
+     
+   <map:match pattern="search_courses/*.html">
+     <map:call resource="course_xquery" />
+     <map:transform src="xsl/searched_detail.xsl" type="xslt2">
+       <map:parameter name="cat_num" value="{1}" />
+       <map:parameter name="url" value="{0}"/>
+       <map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+     </map:transform>
+     <map:serialize type="xhtml" />
+   </map:match>
+ 	
+   	<map:match pattern="department.pdf">
+   	  <map:call resource="course_xquery"/>
+   		<map:transform src="xsl/department_courses_pdf.xsl" label="fo" type="xslt2">
+   		  <map:parameter name="qString" value="{request:queryString}"/>
+   			<map:parameter name="url" value="{0}"/>
+   			<map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+   		</map:transform>
+   		<map:serialize type="fo2pdf"/>
+   	</map:match>
+      
+    <map:match pattern="course.pdf">
+      <map:call resource="course_xquery"/>
+      <map:transform src="xsl/course_pdf.xsl" label="fo" type="xslt2">
+        <map:parameter name="qString" value="{request:queryString}"/>
+        <map:parameter name="url" value="{0}"/>
+        <map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+      </map:transform>
+      <map:serialize type="fo2pdf"/>
+    </map:match>
+	
+	<map:match pattern="searchedcourses.html">
+	  <map:redirect-to uri="searched_courses.page1.html?{request:queryString}"/>
+    </map:match>
+	
+	<map:match pattern="searched_courses.page*.html">
+     <map:call resource="course_xquery" />
+		<map:transform type="filter" label="paged">
+			<map:parameter name="element-name" value="course"/>
+			<map:parameter name="count" value="10"/>
+			<map:parameter name="blocknr" value="{1}"/>
+		</map:transform>  
+		<map:transform src="xsl/course_search_paged.xsl" type="xslt2">
+			<map:parameter name="qString" value="{request:queryString}"/>
+			<map:parameter name="url" value="{0}"/>
+			<map:parameter name="baselink" value="{baselink:SitemapBaseLink}"/>
+		  <map:parameter name="page_name" value="searched_courses."/>
+		 </map:transform>
+		 <map:serialize type="xhtml"/>
+   </map:match>
+   </map:pipeline>
+    
+    <map:pipeline>
+      <map:match pattern="**.html">
+        <map:read src="{1}.html" mime-type="text/html" />
+      </map:match>
+      <map:match pattern="**.xml">
+        <map:read src="{1}.xml" mime-type="text/xml" />
+      </map:match>
+      <map:match pattern="**.xsl">
+        <map:read src="{1}.xsl" mime-type="text/xml" />
+      </map:match>
+      <map:match pattern="**.css">
+        <map:read src="{1}.css" mime-type="text/css" />
+      </map:match>
+      <map:match pattern="**.png">
+        <map:read src="{1}.png" mime-type="image/png" />
+      </map:match>
+      <map:match pattern="**.gif">
+        <map:read src="{1}.gif" mime-type="image/gif" />
+      </map:match>
+      <map:match pattern="**.jpg">
+        <map:read src="{1}.jpg" mime-type="image/jpeg" />
+      </map:match>
+    </map:pipeline>
+  </map:pipelines>
+</map:sitemap>

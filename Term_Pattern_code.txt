@@ -1,0 +1,5 @@
+Term_pattern_code:
+1: Fall Only
+2: Spring Only
+3: Spring and Fall
+4: Full Year
